@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IR System - Document Search Engine</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1>
+                    <span class="icon">🔍</span>
+                    IR System
+                </h1>
+                <p class="subtitle">Information Retrieval System with TF-IDF Ranking</p>
+                
+                <!-- Stats Bar -->
+                <div class="stats-bar">
+                    <div class="stat">
+                        <span class="stat-value">{{ stats.doc_count }}</span>
+                        <span class="stat-label">Documents</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-value">{{ stats.unique_terms }}</span>
+                        <span class="stat-label">Unique Terms</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-value">{{ stats.total_term_occurrences }}</span>
+                        <span class="stat-label">Total Terms</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Search Section -->
+        <div class="search-section">
+            <div class="search-container">
+                <div class="search-box">
+                    <input type="text" id="search-input" placeholder="Enter your search query..." autocomplete="off">
+                    <button id="search-btn">
+                        <span>Search</span>
+                    </button>
+                </div>
+                <div class="search-options">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="highlightTerms" checked>
+                        Highlight matching terms
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="results-section" class="results-section" style="display: none;">
+            <div class="results-header">
+                <h2>Search Results <span id="results-count">(0)</span></h2>
+                <div id="results-info" class="results-info"></div>
+            </div>
+            <div id="query-info" class="query-info" style="display: none;"></div>
+            <div id="results-container" class="results-list"></div>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div id="loading" class="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>Searching...</p>
+        </div>
+
+        <!-- Documents Section -->
+        <div class="documents-section">
+            <div class="section-header">
+                <h2>
+                    <span class="icon">📄</span>
+                    Document Management
+                </h2>
+                <button id="showAddDocBtn" class="btn-primary">
+                    + Add Document
+                </button>
+            </div>
+            <div id="documentsList" class="documents-grid">
+                <div class="loading-small">Loading documents...</div>
+            </div>
+            <div id="doc-info" class="query-info" style="display: none; margin-top: 20px;">
+                <p><strong>Loaded documents:</strong> <span id="doc-count">0</span></p>
+                <div id="doc-list"></div>
+            </div>
+        </div>
+
+        <!-- Add Document Modal -->
+        <div id="addDocModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Add New Document</h3>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <form id="addDocForm">
+                    <div class="form-group">
+                        <label for="docId">Document ID:</label>
+                        <input type="text" id="docId" required placeholder="e.g., article_001">
+                    </div>
+                    <div class="form-group">
+                        <label for="docContent">Document Content:</label>
+                        <textarea id="docContent" rows="8" required placeholder="Enter document text here..."></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn-secondary cancel-btn">Cancel</button>
+                        <button type="submit" class="btn-primary">Add Document</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- View Document Modal -->
+        <div id="viewDocModal" class="modal">
+            <div class="modal-content modal-large">
+                <div class="modal-header">
+                    <h3 id="viewDocTitle">Document</h3>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <pre id="viewDocContent"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
