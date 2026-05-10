@@ -2,8 +2,6 @@ from flask import Flask, render_template, request, jsonify, session
 from ir_system_module import IRSystem, load_documents_from_db, save_document_to_db, delete_document_from_db
 from flask_sqlalchemy import SQLAlchemy
 import os
-from pathlib import Path
-import json
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-here-change-in-production'
@@ -23,7 +21,6 @@ class Document(db.Model):
 
 # Global IR system instance
 ir_system = None
-DOCUMENTS_FOLDER = 'my_documents'
 
 def initialize_ir_system():
     """Initialize or reload the IR system"""
@@ -157,36 +154,6 @@ def reload_system():
     initialize_ir_system()
     return jsonify({'success': True, 'message': 'System reloaded'})
 
-@app.route('/load_documents', methods=['POST'])
-def load_documents():
-    """Load documents from a folder and rebuild the index"""
-    data = request.get_json(silent=True) or {}
-    folder_path = data.get('folder_path', DOCUMENTS_FOLDER)
-    documents = load_documents_from_folder(folder_path)
-
-    if not documents:
-        return jsonify({'success': False, 'message': f'No documents found in folder "{folder_path}".'})
-
-    global ir_system
-    ir_system = IRSystem(documents)
-    ir_system.build_inverted_index()
-
-    inverted_index = []
-    for term, docs in ir_system.inverted_index.items():
-        inverted_index.append({
-            'term': term,
-            'df': ir_system.df[term],
-            'cf': ir_system.cf[term],
-            'documents': [{'doc_id': doc_id, 'tf': docs[doc_id]['tf']} for doc_id in docs]
-        })
-
-    return jsonify({
-        'success': True,
-        'doc_count': len(documents),
-        'doc_names': list(documents.keys()),
-        'inverted_index': inverted_index
-    })
-
 @app.route('/use_example', methods=['POST'])
 def use_example():
     """Reload the current document set as example documents"""
@@ -226,6 +193,4 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
         initialize_ir_system()
-    # Create documents folder if it doesn't exist (for any file operations, but now using DB)
-    Path(DOCUMENTS_FOLDER).mkdir(exist_ok=True)
     app.run(debug=True, port=5000)

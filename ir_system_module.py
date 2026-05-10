@@ -2,8 +2,6 @@ import math
 from collections import defaultdict
 import re
 import os
-from pathlib import Path
-import json
 
 class IRSystem:
     def __init__(self, documents=None):
