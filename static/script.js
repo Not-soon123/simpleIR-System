@@ -2,6 +2,212 @@
 let currentIRSystem = null;
 let currentResults = [];
 
+// Add Document Modal Functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const showAddDocBtn = document.getElementById('showAddDocBtn');
+    const addDocModal = document.getElementById('addDocModal');
+    const addDocForm = document.getElementById('addDocForm');
+    const cancelBtn = document.querySelector('#addDocModal .cancel-btn');
+    const closeBtn = document.querySelector('#addDocModal .close-btn');
+    
+    // Open modal
+    if (showAddDocBtn) {
+        showAddDocBtn.addEventListener('click', () => {
+            if (addDocModal) {
+                addDocModal.style.display = 'block';
+                addDocForm.reset();
+            }
+        });
+    }
+    
+    // Close modal functions
+    function closeModal() {
+        if (addDocModal) {
+            addDocModal.style.display = 'none';
+        }
+    }
+    
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', closeModal);
+    }
+    
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeModal);
+    }
+    
+    // Close modal when clicking outside of it
+    window.addEventListener('click', (event) => {
+        if (event.target === addDocModal) {
+            closeModal();
+        }
+    });
+    
+    // Handle form submission
+    if (addDocForm) {
+        addDocForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const docId = document.getElementById('docId').value.trim();
+            const docContent = document.getElementById('docContent').value.trim();
+            
+            if (!docId || !docContent) {
+                showToast('Please fill in all fields', 'warning');
+                return;
+            }
+            
+            // Show loading state
+            const submitBtn = addDocForm.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Adding...';
+            
+            try {
+                const response = await fetch('/documents', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        id: docId, 
+                        content: docContent 
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    showToast(`Document "${docId}" added successfully!`, 'success');
+                    closeModal();
+                    addDocForm.reset();
+                    // Reload documents
+                    loadAndDisplayDocuments();
+                } else {
+                    showToast(data.error || data.message || 'Failed to add document', 'error');
+                }
+            } catch (error) {
+                showToast('Error adding document', 'error');
+                console.error(error);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }
+        });
+    }
+});
+
+// Load and display documents
+async function loadAndDisplayDocuments() {
+    try {
+        const response = await fetch('/documents');
+        const data = await response.json();
+        
+        if (data.documents && data.documents.length > 0) {
+            displayDocuments(data.documents);
+        } else {
+            const documentsList = document.getElementById('documentsList');
+            if (documentsList) {
+                documentsList.innerHTML = '<div class="no-documents">No documents loaded yet. Add or load documents to get started.</div>';
+            }
+        }
+    } catch (error) {
+        console.error('Error loading documents:', error);
+    }
+}
+
+// Display documents in grid
+function displayDocuments(documents) {
+    const documentsList = document.getElementById('documentsList');
+    if (!documentsList) return;
+    
+    if (documents.length === 0) {
+        documentsList.innerHTML = '<div class="no-documents">No documents loaded yet.</div>';
+        return;
+    }
+    
+    const html = documents.map(doc => `
+        <div class="document-card">
+            <div class="document-header">
+                <h3><i class="fas fa-file-alt"></i> ${escapeHtml(doc.id)}</h3>
+                <span class="document-size">${doc.word_count} words</span>
+            </div>
+            <div class="document-preview">
+                ${escapeHtml(doc.content.substring(0, 150))}${doc.content.length > 150 ? '...' : ''}
+            </div>
+            <div class="document-actions">
+                <button class="btn-small" onclick="viewDocument('${escapeHtml(doc.id)}')">View</button>
+                <button class="btn-small btn-danger" onclick="deleteDocument('${escapeHtml(doc.id)}')">Delete</button>
+            </div>
+        </div>
+    `).join('');
+    
+    documentsList.innerHTML = html;
+}
+
+// View document
+function viewDocument(docId) {
+    const viewDocModal = document.getElementById('viewDocModal');
+    const viewDocTitle = document.getElementById('viewDocTitle');
+    const viewDocContent = document.getElementById('viewDocContent');
+    
+    fetch(`/documents/${docId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.id) {
+                viewDocTitle.textContent = `Document: ${escapeHtml(data.id)}`;
+                viewDocContent.textContent = data.content;
+                viewDocModal.style.display = 'block';
+            }
+        })
+        .catch(error => {
+            showToast('Error loading document', 'error');
+            console.error(error);
+        });
+}
+
+// Delete document
+async function deleteDocument(docId) {
+    if (!confirm(`Are you sure you want to delete "${docId}"?`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/documents/${docId}`, {
+            method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            showToast(`Document "${docId}" deleted successfully!`, 'success');
+            loadAndDisplayDocuments();
+        } else {
+            showToast(data.error || 'Failed to delete document', 'error');
+        }
+    } catch (error) {
+        showToast('Error deleting document', 'error');
+        console.error(error);
+    }
+}
+
+// Close view document modal and setup on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const viewDocModal = document.getElementById('viewDocModal');
+    const closeBtn = document.querySelector('#viewDocModal .close-btn');
+    
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            if (viewDocModal) viewDocModal.style.display = 'none';
+        });
+    }
+    
+    window.addEventListener('click', (event) => {
+        if (event.target === viewDocModal) {
+            viewDocModal.style.display = 'none';
+        }
+    });
+    
+    // Load documents on page load
+    loadAndDisplayDocuments();
+});
+
 // Tab switching
 document.querySelectorAll('.nav-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -41,14 +247,14 @@ if (loadFolderBtn) {
             const data = await response.json();
             
             if (data.success) {
-                showLoaderStatus(`✅ Successfully loaded ${data.doc_count} documents!`, 'success');
+                showLoaderStatus(`<i class="fas fa-check-circle"></i> Successfully loaded ${data.doc_count} documents!`, 'success');
                 displayDocumentInfo(data.doc_names);
                 showToast(`${data.doc_count} documents loaded successfully`, 'success');
             } else {
-                showLoaderStatus(`❌ ${data.message}`, 'error');
+                showLoaderStatus(`<i class="fas fa-exclamation-circle"></i> ${data.message}`, 'error');
             }
         } catch (error) {
-            showLoaderStatus('❌ Error loading documents', 'error');
+            showLoaderStatus('<i class="fas fa-exclamation-circle"></i> Error loading documents', 'error');
             console.error(error);
         }
     });
@@ -69,12 +275,12 @@ if (loadExampleBtn) {
             const data = await response.json();
             
             if (data.success) {
-                showLoaderStatus(`✅ Successfully loaded ${data.doc_count} example documents!`, 'success');
+                showLoaderStatus(`<i class="fas fa-check-circle"></i> Successfully loaded ${data.doc_count} example documents!`, 'success');
                 displayDocumentInfo(data.doc_names);
                 showToast('Example documents loaded successfully', 'success');
             }
         } catch (error) {
-            showLoaderStatus('❌ Error loading example documents', 'error');
+            showLoaderStatus('<i class="fas fa-exclamation-circle"></i> Error loading example documents', 'error');
             console.error(error);
         }
     });
@@ -144,7 +350,7 @@ function displayResults(data) {
         resultsContainer.innerHTML = data.results.map(result => `
             <div class="result-item" onclick="toggleResultExpand(this, '${escapeHtml(result.doc_id)}')">
                 <div class="result-header">
-                    <span class="result-doc-id">📄 ${escapeHtml(result.doc_id)}</span>
+                    <span class="result-doc-id"><i class="fas fa-file-alt"></i> ${escapeHtml(result.doc_id)}</span>
                     <span class="result-score">Score: ${result.score}</span>
                 </div>
                 <div class="result-snippet">
@@ -180,7 +386,7 @@ function displayDocumentInfo(docNames) {
     const docList = document.getElementById('doc-list');
     
     docCount.textContent = docNames.length;
-    docList.innerHTML = docNames.map(name => `<span class="doc-tag">📄 ${escapeHtml(name)}</span>`).join('');
+    docList.innerHTML = docNames.map(name => `<span class="doc-tag"><i class="fas fa-file-alt"></i> ${escapeHtml(name)}</span>`).join('');
     docInfo.style.display = 'block';
 }
 

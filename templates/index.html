@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IR System - Document Search Engine</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="container">
@@ -13,7 +14,7 @@
         <header class="header">
             <div class="header-content">
                 <h1>
-                    <span class="icon">🔍</span>
+                    <i class="fas fa-search"></i>
                     IR System
                 </h1>
                 <p class="subtitle">Information Retrieval System with TF-IDF Ranking</p>
@@ -41,8 +42,7 @@
             <div class="search-container">
                 <div class="search-box">
                     <input type="text" id="search-input" placeholder="Enter your search query..." autocomplete="off">
-                    <button id="search-btn">
-                        <span>Search</span>
+                    <button id="search-btn">                        <i class=\"fas fa-search\"></i>                        <span>Search</span>
                     </button>
                 </div>
                 <div class="search-options">
@@ -74,11 +74,12 @@
         <div class="documents-section">
             <div class="section-header">
                 <h2>
-                    <span class="icon">📄</span>
+                    <i class="fas fa-file"></i>
                     Document Management
                 </h2>
                 <button id="showAddDocBtn" class="btn-primary">
-                    + Add Document
+                    <i class=\"fas fa-plus\"></i>
+                    Add Document
                 </button>
             </div>
             <div id="documentsList" class="documents-grid">
