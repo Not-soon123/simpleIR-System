@@ -137,35 +137,28 @@ class IRSystem:
             }
         return None
 
-def load_documents_from_folder(folder_path):
-    """Load all text files from a folder as documents"""
+def load_documents_from_db(db, Document):
+    """Load all documents from the database"""
     documents = {}
-    folder = Path(folder_path)
-    folder.mkdir(exist_ok=True)
-    
-    txt_files = list(folder.glob("*.txt"))
-    
-    for file_path in txt_files:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            content = f.read()
-            doc_name = file_path.stem
-            documents[doc_name] = content
-    
+    docs = db.session.query(Document).all()
+    for doc in docs:
+        documents[doc.id] = doc.content
     return documents
 
-def save_document(folder_path, doc_name, content):
-    """Save a new document to the folder"""
-    folder = Path(folder_path)
-    folder.mkdir(exist_ok=True)
-    file_path = folder / f"{doc_name}.txt"
-    with open(file_path, 'w', encoding='utf-8') as f:
-        f.write(content)
+def save_document_to_db(db, Document, doc_id, content):
+    """Save a new document to the database"""
+    if db.session.query(Document).get(doc_id):
+        return False  # Already exists
+    new_doc = Document(id=doc_id, content=content)
+    db.session.add(new_doc)
+    db.session.commit()
     return True
 
-def delete_document(folder_path, doc_name):
-    """Delete a document from the folder"""
-    file_path = Path(folder_path) / f"{doc_name}.txt"
-    if file_path.exists():
-        file_path.unlink()
+def delete_document_from_db(db, Document, doc_id):
+    """Delete a document from the database"""
+    doc = db.session.query(Document).get(doc_id)
+    if doc:
+        db.session.delete(doc)
+        db.session.commit()
         return True
     return False

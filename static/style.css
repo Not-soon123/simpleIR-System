@@ -634,6 +634,10 @@ i, .fas, .far, .fal, .fad {
     margin-top: 24px;
 }
 
+.form-actions button {
+    margin: 14px 5px;
+}
+
 #viewDocContent {
     white-space: pre-wrap;
     font-family: inherit;

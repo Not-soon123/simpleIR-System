@@ -1,11 +1,25 @@
 from flask import Flask, render_template, request, jsonify, session
-from ir_system_module import IRSystem, load_documents_from_folder, save_document, delete_document
+from ir_system_module import IRSystem, load_documents_from_db, save_document_to_db, delete_document_from_db
+from flask_sqlalchemy import SQLAlchemy
 import os
 from pathlib import Path
 import json
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-here-change-in-production'
+
+# Database configuration
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///ir_system.db')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
+
+# Database model
+class Document(db.Model):
+    id = db.Column(db.String(100), primary_key=True)
+    content = db.Column(db.Text, nullable=False)
+
+    def __repr__(self):
+        return f'<Document {self.id}>'
 
 # Global IR system instance
 ir_system = None
@@ -14,15 +28,14 @@ DOCUMENTS_FOLDER = 'my_documents'
 def initialize_ir_system():
     """Initialize or reload the IR system"""
     global ir_system
-    documents = load_documents_from_folder(DOCUMENTS_FOLDER)
+    documents = load_documents_from_db(db, Document)
     if documents:
         ir_system = IRSystem(documents)
         ir_system.build_inverted_index()
         return True
     return False
 
-# Initialize on startup
-initialize_ir_system()
+# Initialize on startup - moved to main
 
 @app.route('/')
 def index():
@@ -106,8 +119,8 @@ def add_document():
     if ir_system and doc_id in ir_system.documents:
         return jsonify({'error': 'Document already exists'}), 409
     
-    # Save to file
-    if save_document(DOCUMENTS_FOLDER, doc_id, content):
+    # Save to database
+    if save_document_to_db(db, Document, doc_id, content):
         # Reload the system
         initialize_ir_system()
         return jsonify({'success': True, 'message': f'Document "{doc_id}" added successfully'})
@@ -117,7 +130,7 @@ def add_document():
 @app.route('/documents/<doc_id>', methods=['DELETE'])
 def remove_document(doc_id):
     """Delete a document"""
-    if delete_document(DOCUMENTS_FOLDER, doc_id):
+    if delete_document_from_db(db, Document, doc_id):
         initialize_ir_system()
         return jsonify({'success': True, 'message': f'Document "{doc_id}" deleted successfully'})
     return jsonify({'error': 'Document not found'}), 404
@@ -209,6 +222,10 @@ def get_stats_route():
     })
 
 if __name__ == '__main__':
-    # Create documents folder if it doesn't exist
+    # Create database tables
+    with app.app_context():
+        db.create_all()
+        initialize_ir_system()
+    # Create documents folder if it doesn't exist (for any file operations, but now using DB)
     Path(DOCUMENTS_FOLDER).mkdir(exist_ok=True)
     app.run(debug=True, port=5000)
