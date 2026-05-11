@@ -18,6 +18,10 @@
                     IR System
                 </h1>
                 <p class="subtitle">Information Retrieval System with TF-IDF Ranking</p>
+                <div class="header-actions" style="display:flex;justify-content:center;align-items:center;gap:12px;margin:0 auto 24px;flex-wrap:wrap;">
+                    <span style="color:white;font-weight:600;">Logged in as {{ username|e }} ({{ role|capitalize }})</span>
+                    <a href="{{ url_for('logout') }}" class="btn-secondary" style="background:rgba(255,255,255,0.18);color:white;border:1px solid rgba(255,255,255,0.28);">Logout</a>
+                </div>
                 
                 <!-- Stats Bar -->
                 <div class="stats-bar">
@@ -71,6 +75,7 @@
         </div>
 
         <!-- Documents Section -->
+        {% if role == 'admin' %}
         <div class="documents-section">
             <div class="section-header">
                 <h2>
@@ -78,7 +83,7 @@
                     Document Management
                 </h2>
                 <button id="showAddDocBtn" class="btn-primary">
-                    <i class=\"fas fa-plus\"></i>
+                    <i class="fas fa-plus"></i>
                     Add Document
                 </button>
             </div>
@@ -90,6 +95,19 @@
                 <div id="doc-list"></div>
             </div>
         </div>
+        {% else %}
+        <div class="documents-section">
+            <div class="section-header">
+                <h2>
+                    <i class="fas fa-file"></i>
+                    Search-Only Access
+                </h2>
+            </div>
+            <div class="query-info" style="margin-top: 16px; color: var(--text-secondary);">
+                <p>You are signed in as a guest. You can search documents, but document details and management are only available to admin.</p>
+            </div>
+        </div>
+        {% endif %}
 
         <!-- Add Document Modal -->
         <div id="addDocModal" class="modal">
@@ -129,6 +147,9 @@
         </div>
     </div>
 
+    <script>
+        window.USER_ROLE = '{{ role }}';
+    </script>
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>

@@ -95,6 +95,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Load and display documents
 async function loadAndDisplayDocuments() {
+    if (window.USER_ROLE !== 'admin') {
+        return;
+    }
     try {
         const response = await fetch('/documents');
         const data = await response.json();
@@ -204,8 +207,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Load documents on page load
-    loadAndDisplayDocuments();
+    // Load documents on page load only for admin users
+    if (window.USER_ROLE === 'admin') {
+        loadAndDisplayDocuments();
+    }
 });
 
 // Tab switching

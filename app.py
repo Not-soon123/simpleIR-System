@@ -1,10 +1,15 @@
-from flask import Flask, render_template, request, jsonify, session
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from ir_system_module import IRSystem, load_documents_from_db, save_document_to_db, delete_document_from_db
 from flask_sqlalchemy import SQLAlchemy
+from dotenv import load_dotenv
 import os
 
 app = Flask(__name__)
-app.secret_key = 'your-secret-key-here-change-in-production'
+
+# Load environment variables from .env file
+load_dotenv()
+
+app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-here-change-in-production')
 
 # Database configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///ir_system.db')
@@ -34,11 +39,56 @@ def initialize_ir_system():
 
 # Initialize on startup - moved to main
 
+def is_admin():
+    return session.get('role') == 'admin'
+
+
+def get_user_role():
+    return session.get('role', 'guest')
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if 'role' in session:
+        return redirect(url_for('index'))
+
+    admin_password = os.environ.get('ADMIN_PASSWORD', 'Munasuna123')
+
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '').strip()
+
+        if not username:
+            return render_template('login.html', error='Please enter a username.', help_text='Sign in as admin to add documents, or sign in as guest to search.')
+
+        if username.lower() == 'admin':
+            if password == admin_password:
+                session['role'] = 'admin'
+                session['username'] = 'admin'
+                return redirect(url_for('index'))
+            return render_template('login.html', error='Invalid admin password.', help_text='Sign in as admin to add documents, or sign in as guest to search.')
+
+        session['role'] = 'guest'
+        session['username'] = username
+        return redirect(url_for('index'))
+
+    return render_template('login.html', error=None, help_text='Sign in as admin to add documents, or sign in as guest to search.')
+
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
+
+
 @app.route('/')
 def index():
     """Home page with search interface"""
-    stats = ir_system.get_document_info() if ir_system else {'doc_count': 0, 'unique_terms': 0}
-    return render_template('index.html', stats=stats, doc_count=stats['doc_count'])
+    if 'role' not in session:
+        return redirect(url_for('login'))
+
+    stats = ir_system.get_document_info() if ir_system else {'doc_count': 0, 'unique_terms': 0, 'total_term_occurrences': 0}
+    return render_template('index.html', stats=stats, doc_count=stats['doc_count'], role=get_user_role(), username=session.get('username', 'Guest'))
 
 @app.route('/search', methods=['GET', 'POST'])
 def search():
@@ -78,6 +128,8 @@ def search():
 @app.route('/documents')
 def list_documents():
     """List all documents"""
+    if not is_admin():
+        return jsonify({'error': 'Unauthorized'}), 403
     if not ir_system:
         return jsonify({'documents': []})
     
@@ -95,6 +147,8 @@ def list_documents():
 @app.route('/documents/<doc_id>')
 def get_document(doc_id):
     """Get a specific document"""
+    if not is_admin():
+        return jsonify({'error': 'Unauthorized'}), 403
     if ir_system and doc_id in ir_system.documents:
         return jsonify({
             'id': doc_id,
@@ -105,6 +159,8 @@ def get_document(doc_id):
 @app.route('/documents', methods=['POST'])
 def add_document():
     """Add a new document"""
+    if not is_admin():
+        return jsonify({'error': 'Unauthorized'}), 403
     data = request.json
     doc_id = data.get('id', '').strip()
     content = data.get('content', '').strip()
@@ -127,6 +183,8 @@ def add_document():
 @app.route('/documents/<doc_id>', methods=['DELETE'])
 def remove_document(doc_id):
     """Delete a document"""
+    if not is_admin():
+        return jsonify({'error': 'Unauthorized'}), 403
     if delete_document_from_db(db, Document, doc_id):
         initialize_ir_system()
         return jsonify({'success': True, 'message': f'Document "{doc_id}" deleted successfully'})
@@ -193,4 +251,4 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
         initialize_ir_system()
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=int(os.environ.get('PORT', 5000)))
